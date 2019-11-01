@@ -84,7 +84,9 @@ func (f *TextFragment) FuncNames() []string {
 			} else {
 				low := strings.Index(def, ")") + 2
 				hig := strings.Index(def[low:], "(") + low
-				funcnames = append(funcnames, def[low:hig])
+				if low < hig && low >= 0 && hig < len(def) {
+					funcnames = append(funcnames, def[low:hig])
+				}
 			}
 		}
 	}
