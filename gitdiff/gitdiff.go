@@ -3,6 +3,7 @@ package gitdiff
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 // File describes changes to a single file. It can be either a text file or a
@@ -37,6 +38,18 @@ type File struct {
 	ReverseBinaryFragment *BinaryFragment
 }
 
+func (f *File) HasFunc(match func(string)bool) bool {
+	for _, fragment := range f.TextFragments {
+		funcnames := fragment.FuncNames()
+		for _, fname := range funcnames {
+			if match(fname) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // TextFragment describes changed lines starting at a specific line in a text file.
 type TextFragment struct {
 	Comment string
@@ -59,6 +72,27 @@ type TextFragment struct {
 // Header returns the canonical header of this fragment.
 func (f *TextFragment) Header() string {
 	return fmt.Sprintf("@@ -%d,%d +%d,%d @@ %s", f.OldPosition, f.OldLines, f.NewPosition, f.NewLines, f.Comment)
+}
+
+func (f *TextFragment) FuncNames() []string {
+	funcnames := []string{}
+	addname := func(line string) {
+		if strings.HasPrefix(line, "func") {
+			def := strings.TrimRight(line, " {")
+			if strings.Count(def, "(") == 1 {
+				funcnames = append(funcnames, def[5:])
+			} else {
+				low := strings.Index(def, ")") + 2
+				hig := strings.Index(def[low:], "(") + low
+				funcnames = append(funcnames, def[low:hig])
+			}
+		}
+	}
+	addname(f.Comment)
+	for _, line := range f.Lines {
+		addname(line.Line)
+	}
+	return funcnames
 }
 
 // Line is a line in a text fragment.

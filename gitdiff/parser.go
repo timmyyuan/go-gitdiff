@@ -7,7 +7,108 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"strings"
 )
+
+type Commit struct {
+	CommitSha string
+	Content string
+}
+
+func EmitCommit(content string) (Commit, bool) {
+	tokens := strings.Split(content, " ")
+	if len(tokens) < 2 {
+		return Commit{}, false
+	}
+	return Commit{
+		CommitSha: tokens[1],
+		Content:   content,
+	}, true
+}
+
+func (c Commit) Equal(rhs Commit) bool {
+	return c.CommitSha == rhs.CommitSha
+}
+
+
+type Patches struct {
+	FilesToSha map[*File]string
+	ShaToFiles map[string][]*File
+	ShaToCommit map[string]Commit
+}
+
+func (p *Patches) AppendFile(cmt Commit, file *File) {
+	p.FilesToSha[file] = cmt.CommitSha
+	p.ShaToFiles[cmt.CommitSha] = append(p.ShaToFiles[cmt.CommitSha], file)
+	p.ShaToCommit[cmt.CommitSha] = cmt
+}
+
+func (p *Patches) GetFiles(sha string) ([]*File, bool) {
+	files, ok := p.ShaToFiles[sha]
+	return files, ok
+}
+
+func (p *Patches) GetCommit(file *File) (Commit, bool) {
+	sha, ok := p.FilesToSha[file]
+	if !ok {
+		return Commit{}, false
+	}
+	cmt, ok := p.ShaToCommit[sha]
+	if !ok {
+		return Commit{}, false
+	}
+	return cmt, ok
+}
+
+func ParsePatch(r io.Reader) ([]*File, *Patches, error) {
+	p := newParser(r)
+	patches := &Patches{
+		FilesToSha:  make(map[*File]string),
+		ShaToFiles:  make(map[string][]*File),
+		ShaToCommit: make(map[string]Commit),
+	}
+	if err := p.Next(); err != nil {
+		if err == io.EOF {
+			return nil, patches, nil
+		}
+		return nil, patches, err
+	}
+
+	var files []*File
+	lastCommit := Commit{}
+	for {
+		file, pre, err := p.ParseNextFileHeader()
+		if err != nil {
+			return files, patches, err
+		}
+		if file == nil {
+			break
+		}
+
+		for _, fn := range []func(*File) (int, error){
+			p.ParseTextFragments,
+			p.ParseBinaryFragments,
+		} {
+			n, err := fn(file)
+			if err != nil {
+				return files, patches, err
+			}
+			if n > 0 {
+				break
+			}
+		}
+
+		files = append(files, file)
+		if cmt, ok := EmitCommit(pre); ok {
+			patches.AppendFile(cmt, file)
+			lastCommit = cmt
+		} else {
+			patches.AppendFile(lastCommit, file)
+		}
+	}
+
+	return files, patches, nil
+}
 
 // Parse parses a patch with changes to one or more files. Any content before
 // the first file is returned as the second value. If an error occurs while
