@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"log"
 )
 
 // File describes changes to a single file. It can be either a text file or a
@@ -77,17 +78,26 @@ func (f *TextFragment) Header() string {
 func (f *TextFragment) FuncNames() []string {
 	funcnames := []string{}
 	addname := func(line string) {
-		if strings.HasPrefix(line, "func") {
-			def := strings.TrimRight(line, " {")
-			if strings.Count(def, "(") == 1 {
-				funcnames = append(funcnames, def[5:])
-			} else {
-				low := strings.Index(def, ")") + 2
-				hig := strings.Index(def[low:], "(") + low
-				if low < hig && low >= 0 && hig < len(def) {
-					funcnames = append(funcnames, def[low:hig])
-				}
-			}
+		if strings.HasPrefix(line, "func") == false || strings.Contains(def, "(") == false {
+			return
+		}
+		def := strings.TrimRight(line, " {")
+		// func NAME(arg1, arg2, ...)
+		if strings.Count(def, "(") == 1 && len(def) > 5 {
+			funcnames = append(funcnames, def[5:])
+			return
+		}
+		// func (this *Object) NAME(arg1, arg2, ...)
+		low := strings.Index(def, ")") + 2
+		if low >= len(def) {
+			log.Printf("Can't handle '%s'")
+			return
+		}
+		hig := strings.Index(def[low:], "(") + low
+		if low < hig && low >= 0 && hig < len(def) {
+			funcnames = append(funcnames, def[low:hig])
+		} else {
+			log.Printf("Can't handle '%s'")
 		}
 	}
 	addname(f.Comment)
