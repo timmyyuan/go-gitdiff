@@ -90,14 +90,14 @@ func (f *TextFragment) FuncNames() []string {
 		// func (this *Object) NAME(arg1, arg2, ...)
 		low := strings.Index(def, ")") + 2
 		if low >= len(def) {
-			log.Printf("Can't handle '%s'")
+			log.Printf("Can't handle '%s'"， def)
 			return
 		}
 		hig := strings.Index(def[low:], "(") + low
 		if low < hig && low >= 0 && hig < len(def) {
 			funcnames = append(funcnames, def[low:hig])
 		} else {
-			log.Printf("Can't handle '%s'")
+			log.Printf("Can't handle '%s'"， def)
 		}
 	}
 	addname(f.Comment)
