@@ -78,7 +78,7 @@ func (f *TextFragment) Header() string {
 func (f *TextFragment) FuncNames() []string {
 	funcnames := []string{}
 	addname := func(line string) {
-		if strings.HasPrefix(line, "func") == false || strings.Contains(def, "(") == false {
+		if strings.HasPrefix(line, "func") == false || strings.Contains(line, "(") == false {
 			return
 		}
 		def := strings.TrimRight(line, " {")
