@@ -60,6 +60,7 @@ func (p *Patches) GetCommit(file *File) (Commit, bool) {
 	return cmt, ok
 }
 
+
 func ParsePatch(r io.Reader) ([]*File, *Patches, error) {
 	p := newParser(r)
 	patches := &Patches{
