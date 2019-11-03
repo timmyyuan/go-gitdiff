@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"log"
+	"unicode"
 )
 
 // File describes changes to a single file. It can be either a text file or a
@@ -81,14 +82,20 @@ func (f *TextFragment) FuncNames() []string {
 		if strings.HasPrefix(line, "func") == false || strings.Contains(line, "(") == false {
 			return
 		}
-		def := strings.TrimRight(line, " {")
+		def := strings.TrimRight(line, " {\n")
 		// func NAME(arg1, arg2, ...)
 		if strings.Count(def, "(") == 1 && len(def) > 5 {
 			funcnames = append(funcnames, def[5:])
 			return
 		}
+		// func NAME(arg1, arg2, ...) (res1, res2, ...)
+		low := strings.Index(def, "(") - 1
+		if len(def) > 5 && low >= 4 && low < len(def) && unicode.IsSpace(rune(def[low])) == false {
+			funcnames = append(funcnames, def[5:])
+			return
+		}
 		// func (this *Object) NAME(arg1, arg2, ...)
-		low := strings.Index(def, ")") + 2
+		low = strings.Index(def, ")") + 2
 		if low >= len(def) {
 			log.Printf("Can't handle '%s'", def)
 			return
