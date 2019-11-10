@@ -52,6 +52,14 @@ func (f *File) HasFunc(match func(string)bool) bool {
 	return false
 }
 
+func (f *File) Funcs() []string {
+	funcs := []string{}
+	for _, fragment := range f.TextFragments {
+		funcs = append(funcs, fragment.FuncNames()...)
+	}
+	return funcs
+}
+
 // TextFragment describes changed lines starting at a specific line in a text file.
 type TextFragment struct {
 	Comment string
